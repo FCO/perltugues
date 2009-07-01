@@ -3,6 +3,7 @@ package perltugues;
 require 5.005_62;
 use strict;
 use warnings;
+use utf8;
 
 our $VERSION = '0.16';
 
@@ -29,20 +30,23 @@ FILTER_ONLY
 },
   code_no_comments  => \&filter;
 my $tipo = "inteiro|texto|real|caracter";
+#my $tipo = '\w+';
 
 sub filter {
    my @var;
    my @varArray;
    $_ = "use strict;$/" . $_;
    s#\bse\b\s*(.*?)\{#if ($1)\{$/#gm;
+   s#\bse\s*n[ãa]o#else#g;
    s#\ba\s+n[aã]o\s+ser(?:\s+q(?:ue)?)?\b\s*(.*?)\{#unless ($1)\{$/#gm;
-   s#\bpara\b\s+(\w+)(.*?)\{#for $2\{\$$1->vale(\$_);$/#gm;
+   s#\bpara\b\s+(\w+)\((.*?)\)\{#for($2)\{\$$1->vale(\$_);$/#gm;
+   s#\bpara\b\s*\((.*?)\)\{#for($1)\{$/#gm;
    s#\benquanto\b\s*(.*?)\{#while ($1)\{$/#gm;
-   s#\bat(?:eh?|é)(?:\s+q(?:ue)?)?\b\s*(.*?)\{#until $1\{$/#gm;
+   s#\bat(?:eh?|é)(?:\s+q(?:ue)?)?\b\s*(.*?)\{#until($1)\{$/#gm;
    s/\bescrev[ae]\b(.*?)(;|$)/print($1);/g;
    s/\bleia\b(?:\s*\(?(.*?)\)?)?\s*;/chomp(my \$_tmp_=<>);\$$1->vale(\$_tmp_);/g;
    s/\bde\s+(.+?)\s+a\s+(.+?)(?:\s+(?:a|para)\s+cada\s+(.+?))(\s*[])};,])/map({(\$_ * $3) + $1} 0 .. (int($2\/$3) - ($1?1:0)))$4/g;
-   s/\bde\s+(.+?)\s+a\s+(.+?)(\s*[])};,])/($1 .. $2)$3/g;
+   s/\bde\s+(.+?)\s+a\s+(.+?)(\s*[])};,])/$1 .. $2$3/g;
    s/\bsaia do (?:loop|la[cç]o)\b/last/g;
    s/\bpr[óo]ximo\b/next/g;
    s/\bde novo\b/redo/g;
@@ -55,30 +59,6 @@ sub filter {
    s/\bfim\b/}/g;
    s/\bfun[cç][aã]o\b/sub/g;
 
-### ___   Tipos Escalares  ___ ###
-
-   my @varB = grep {!/^\s*$/} m#(?:^|;)\s*\b(?:$tipo)\s*:\s*([\w, ]+)\s*;#gsm;
-   push(@var, split /\s*,\s*/, join ",", @varB);
-
-   my $redef = (grep{my $v=$_; 1 < grep {$v eq $_} @var} @var)[0];
-   die qq#Variavel "$redef" redefinida!$/# if defined $redef;
-
-   my $err_var = (grep{!/^[a-z,A-Z]/} @var)[0];
-   die qq#Nome invalido da variavel "$err_var".$/# if defined $err_var;
-
-   my($t, $v);
-   my %tipo = m#(?:^|;)\s*\b($tipo)\s*:\s*([\w, ]+)\s*;#gsmx;
-   for my $t(keys %tipo){
-      $_ = "use perltugues::$t;$/" . $_;
-   }
-   s#((?:^|;)\s*)\b($tipo)\s*:\s*([\w, ]+)\s*;
-    #$1 . join$/,map{"my \$$_ = perltugues::$2->new;"}split/\s*,\s*/, $3
-    #gesmx;
-   for my $var(@var){
-      s/([^\$])\b$var\s*=\s*((['"])?.*?\3?)\s*;/$1\$$var->vale($2);/g;
-      s/([^\$])\b$var\b/$1\$$var/g;
-   }
-
 ### ___   Tipos Array  ___ ###
 
    {
@@ -86,7 +66,7 @@ sub filter {
       @varB = map {/^(\w+)/; $1} @varB;
       push(@varArray, split /\s*,\s*/, join ",", @varB);
 
-      my $redef = (grep{$v=$_; 1 < grep {$v eq $_} @varArray} @varArray)[0];
+      my $redef = (grep{my $v=$_; 1 < grep {$v eq $_} @varArray} @varArray)[0];
       die qq#Variavel "$redef" redefinida!$/# if defined $redef;
 
       my $err_var = (grep{!/^[a-z,A-Z]/} @varArray)[0];
@@ -106,12 +86,39 @@ sub filter {
                   }split/\s*,\s*/, $_var
        #gexsm;
       for my $var(@varArray){
-         s/([^\$])\b$var\[(.*?)\]\s*=\s*((['"])?.*?\3?)\s*;/$1($2 <= \$#$var?\$$var\[$2]->vale($3):die qq#O array "$var" esta sendo acessado numa posicao inexistente\$\/#);/g;
-         s/([^\$])\b$var\[(.*?)\]/$1($2 <= \$#$var?\$$var\[$2]:die qq#O array "$var" esta sendo acessado numa posicao inexistente\$\/#)/g;
+         s/\btamanho\s*\($var\)/scalar \@$var/g;
+         s/([^\$])\b$var\[(.+?)\]\s*=\s*((['"])?.*?\3?)\s*;/$1($2 <= \$#$var?\${$var}[$2]->vale($3):die qq#O array "\\$var" esta sendo acessado numa posicao inexistente\$\/#);/g;
+         s/([^\$])\b$var\[(.+?)\]/$1($2 <= \$#$var?\$$var\[$2]:die qq#O array "$var" esta sendo acessado numa posicao inexistente\$\/#)/g;
          s/([^@#])\b$var\b(?!\[.*?\])/$1\@$var/g;
-         s/\btamanho\s*\($var\)/\$#$var/g;
       }
    }
+### ___   Tipos Escalares  ___ ###
+
+   my @varB = grep {!/^\s*$/} m#\s*\b(?:$tipo)\s*:\s*([\w, ]+)\s*;#gsm;
+   #my @varB = grep {!/^\s*$/} m#(?:^|;)\s*\b(?:$tipo)\s*:\s*([\w, ]+)\s*;#gsm;
+   push(@var, split /\s*,\s*/, join ",", @varB);
+
+   my $redef = (grep{my $v=$_; 1 < grep {$v eq $_} @var} @var)[0];
+   die qq#Variavel "$redef" redefinida!$/# if defined $redef;
+
+   my $err_var = (grep{!/^[a-z,A-Z]/} @var)[0];
+   die qq#Nome invalido da variavel "$err_var".$/# if defined $err_var;
+
+   my($t, $v);
+   my %tipo = m#\s*\b($tipo)\s*:\s*([\w, ]+)\s*;#gsmx;
+   #my %tipo = m#(?:^|;)\s*\b($tipo)\s*:\s*([\w, ]+)\s*;#gsmx;
+   for my $t(keys %tipo){
+      $_ = "use perltugues::$t;$/" . $_;
+   }
+   #s#((?:^|;)\s*)\b($tipo)\s*:\s*([\w, ]+)\s*;
+   s#(\s*)\b($tipo)\s*:\s*([\w, ]+)\s*;
+    #$1 . join$/,map{"my \$$_ = perltugues::$2->new;"}split/\s*,\s*/, $3
+    #gesmx;
+   for my $var(@var){
+      s/([^\$])\b$var\s*=\s*((['"])?.*?\3?)\s*;/$1\$$var->vale($2);/g;
+      s/([^\$])\b$var\b/$1\$$var/g;
+   }
+
 };
 
 42;
