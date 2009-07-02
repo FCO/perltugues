@@ -4,10 +4,10 @@ use Test::More tests => 12;
 
 use perltugues;
 
-my $ret = `$^X -Ilib -Mperltugues -e 'escreva "teste"'`;
+my $ret = `$^X -Ilib -Mperltugues -e 'escreva "teste";'`;
 chomp $ret;
 
-is("teste", $ret);
+is($ret, "teste");
 
 inteiro: i;
 

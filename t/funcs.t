@@ -4,7 +4,7 @@ use Test::More tests => 24;
 
 use perltugues;
 
-my $ret = `$^X -Ilib -Mperltugues -e 'escreva "teste"'`;
+my $ret = `$^X -Ilib -Mperltugues -e 'escreva "teste";'`;
 chomp $ret;
 
 is("teste", $ret);
@@ -34,6 +34,6 @@ inteiro: i;
 i = 1;
 
 enquanto i <= 10 {
-   ok(1, "teste enquanto $_");
+   ok(1, "teste enquanto $i");
    i++;
 }

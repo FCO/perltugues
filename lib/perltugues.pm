@@ -36,17 +36,54 @@ sub filter {
    my @var;
    my @varArray;
    $_ = "use strict;$/" . $_;
-   s#\bse\b\s*(.*?)\{#if ($1)\{$/#gm;
-   s#\bse\s*n[ãa]o#else#g;
-   s#\ba\s+n[aã]o\s+ser(?:\s+q(?:ue)?)?\b\s*(.*?)\{#unless ($1)\{$/#gm;
-   s#\bpara\b\s+(\w+)\((.*?)\)\{#for($2)\{\$$1->vale(\$_);$/#gm;
-   s#\bpara\b\s*\((.*?)\)\{#for($1)\{$/#gm;
-   s#\benquanto\b\s*(.*?)\{#while ($1)\{$/#gm;
-   s#\bat(?:eh?|é)(?:\s+q(?:ue)?)?\b\s*(.*?)\{#until($1)\{$/#gm;
-   s/\bescrev[ae]\b(.*?)(;|$)/print($1);/g;
+
+   s/#.*$//g;
+
+   s# \bse\b \s* \(? (.*?) \)? \s* \{
+    #if ($1)\{$/
+    #gmx;
+
+   s# \bse \s* n[ãa]o
+    #else
+    #gmx;
+
+   s# \ba \s+ n[aã]o \s+ ser (?:\s+ q(?:ue)? )?\b \s* (.*?) \s* \{
+    #unless ($1)\{$/
+    #gmx;
+
+   s# \bpara\b \s+ (\w+) \s* \( (.*?) \) \s* \{
+    #for ($2){\$$1->vale(\$_);$/
+    #gmx;
+
+   s# \bpara\b \s+ (\w+) \s* <- \s* \(? (.*?) \)? \s* \{
+    #for ($2){\$$1->vale(\$_);$/
+    #gmx;
+
+   s# \bpara\b \s* \(? (.*?)\) \)? \s* \{
+    #for ($1){
+    #gmx;
+
+   s/ (\(?) \bde \s+ (\w+) \s+ a \s+ (\w+) (?:\s+ (?:a|para) \s+ cada \s+ (.+?) ) (\)?)
+    /$1map({(\$_ * $4) + $2} 0 .. (int($3\/$4) - ($2?1:0)))$5
+    /gmx;
+
+   s/ (\(?) \bde \s+ (\w+) \s+ a \s+ (\w+) (\)?)
+    /$1$2 .. $3$4
+    /gmx;
+
+   s# \benquanto\b \s* \(? (.*?) \)? \s*\{
+    #while ($1)\{$/
+    #gmx;
+
+   s# \bat(?:eh?|é) (?:\s+q(?:ue)?)?\b \s* (\()? (.*?) \)? \{
+    #until($2)\{$/
+    #gmx;
+
+   s/ \bescrev[ae]\b \s* \(? (.*?) \)? (;)
+    /print($1)$2
+    /gmx;
+
    s/\bleia\b(?:\s*\(?(.*?)\)?)?\s*;/chomp(my \$_tmp_=<>);\$$1->vale(\$_tmp_);/g;
-   s/\bde\s+(.+?)\s+a\s+(.+?)(?:\s+(?:a|para)\s+cada\s+(.+?))(\s*[])};,])/map({(\$_ * $3) + $1} 0 .. (int($2\/$3) - ($1?1:0)))$4/g;
-   s/\bde\s+(.+?)\s+a\s+(.+?)(\s*[])};,])/$1 .. $2$3/g;
    s/\bsaia do (?:loop|la[cç]o)\b/last/g;
    s/\bpr[óo]ximo\b/next/g;
    s/\bde novo\b/redo/g;
